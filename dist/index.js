@@ -35701,8 +35701,8 @@ class GitCommandManager {
         const sparseCheckoutPath = external_path_namespaceObject.join(this.workingDirectory, output.stdout.trimRight());
         await external_fs_namespaceObject.promises.appendFile(sparseCheckoutPath, `\n${sparseCheckout.join('\n')}\n`);
     }
-    async checkout(ref, startPoint) {
-        const args = ['checkout', '--progress', '--force'];
+    async checkout(ref, startPoint, showProgress) {
+        const args = ['checkout', showProgress ? '--progress' : '--quiet', '--force'];
         if (startPoint) {
             args.push('-B', ref, startPoint);
         }
@@ -35711,8 +35711,8 @@ class GitCommandManager {
         }
         await this.execGit(args);
     }
-    async checkoutDetach() {
-        const args = ['checkout', '--detach'];
+    async checkoutDetach(showProgress) {
+        const args = ['checkout', '--detach', showProgress ? '--progress' : '--quiet'];
         await this.execGit(args);
     }
     async config(configKey, configValue, globalConfig, add, configFile) {
@@ -36127,7 +36127,7 @@ async function prepareExistingDirectory(git, repositoryPath, repositoryUrl, clea
             startGroup('Removing previously created refs, to avoid conflicts');
             // Checkout detached HEAD
             if (!(await git.isDetached())) {
-                await git.checkoutDetach();
+                await git.checkoutDetach(false);
             }
             // Remove all refs/heads/*
             let branches = await git.branchList(false);
@@ -41807,6 +41807,9 @@ async function getSource(settings) {
         // Fetch
         startGroup('Fetching the repository');
         const fetchOptions = {};
+        if (settings.showProgress) {
+            fetchOptions.showProgress = true;
+        }
         if (settings.filter) {
             fetchOptions.filter = settings.filter;
         }
@@ -41877,7 +41880,7 @@ async function getSource(settings) {
         }
         // Checkout
         startGroup('Checking out the ref');
-        await git.checkout(checkoutInfo.ref, checkoutInfo.startPoint);
+        await git.checkout(checkoutInfo.ref, checkoutInfo.startPoint, settings.showProgress);
         endGroup();
         // Submodules
         if (settings.submodules) {
